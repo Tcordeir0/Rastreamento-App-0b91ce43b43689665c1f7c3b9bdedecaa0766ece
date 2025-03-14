@@ -364,3 +364,39 @@ export const api = {
 };
 
 export default api;
+
+// Configuração da API Go
+const GO_API_URL = 'http://192.168.1.22:8080';
+
+// Funções específicas para a API Go
+export const goApi = {
+  registerDriver: async (driverData: any) => {
+    try {
+      const response = await axios.post(`${GO_API_URL}/drivers`, driverData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao cadastrar motorista:', error);
+      throw new Error(error.response?.data?.message || 'Falha no cadastro');
+    }
+  },
+
+  updateDriverLocation: async (driverId: string, location: any) => {
+    try {
+      const response = await axios.put(`${GO_API_URL}/drivers/${driverId}/location`, location);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao atualizar localização:', error);
+      throw new Error(error.response?.data?.message || 'Falha na atualização');
+    }
+  },
+
+  getDrivers: async () => {
+    try {
+      const response = await axios.get(`${GO_API_URL}/drivers`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro ao buscar motoristas:', error);
+      throw new Error(error.response?.data?.message || 'Falha na busca');
+    }
+  }
+};
