@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"rastreamento-api/config"
 )
 
 type Driver struct {
@@ -41,7 +44,15 @@ type Location struct {
 	Timestamp int64   `json:"timestamp"`
 }
 
+var db *sql.DB
+
 func main() {
+	db, err := config.ConnectDB()
+	if err != nil {
+		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
+	}
+	defer db.Close()
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/ws", handleWebSocket)
@@ -50,6 +61,23 @@ func main() {
 	r.HandleFunc("/drivers", createDriver).Methods("POST")
 	r.HandleFunc("/drivers/{id}/location", updateDriverLocation).Methods("PUT")
 	r.HandleFunc("/drivers/{id}/track", getDriverTrack).Methods("GET")
+	r.HandleFunc("/create-database", func(w http.ResponseWriter, r *http.Request) {
+		db, err := sql.Open("mysql", "root:senha@tcp(localhost:3306)/")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Erro ao conectar ao MySQL: %v", err), http.StatusInternalServerError)
+			return
+		}
+		defer db.Close()
+
+		_, err = db.Exec("CREATE DATABASE IF NOT EXISTS `informacoes-registro-login`")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Erro ao criar banco de dados: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Banco de dados 'informacoes-registro-login' criado com sucesso!"))
+	}).Methods("POST")
 
 	log.Println("API rodando na porta 8080...")
 	log.Fatal(http.ListenAndServe(":8080", r))
