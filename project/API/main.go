@@ -79,6 +79,44 @@ func main() {
 		w.Write([]byte("Banco de dados 'informacoes-registro-login' criado com sucesso!"))
 	}).Methods("POST")
 
+	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		// Limpar a sessão do usuário
+		http.SetCookie(w, &http.Cookie{
+			Name:    "session_token",
+			Value:   "",
+			Path:    "/",
+			MaxAge:  -1,
+		})
+		// Redirecionar para a página de login
+		http.Redirect(w, r, "/login", http.StatusFound)
+	}).Methods("POST")
+
+	r.HandleFunc("/registros", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.Query("SELECT id, nome, email FROM usuarios")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Erro ao buscar registros: %v", err), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var registros []map[string]string
+		for rows.Next() {
+			var id, nome, email string
+			if err := rows.Scan(&id, &nome, &email); err != nil {
+				http.Error(w, fmt.Sprintf("Erro ao ler registro: %v", err), http.StatusInternalServerError)
+				return
+			}
+			registros = append(registros, map[string]string{
+				"id":    id,
+				"nome":  nome,
+				"email": email,
+			})
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(registros)
+	}).Methods("GET")
+
 	log.Println("API rodando na porta 8080...")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
